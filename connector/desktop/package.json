@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:ui": "node scripts/build-ui.js",
+    "build:ui": "node scripts/build-ui.cjs",
     "dev": "tauri dev",
     "build": "tauri build",
     "build:windows": "tauri build --bundles nsis --target x86_64-pc-windows-msvc",
