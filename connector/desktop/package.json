@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:ui": "rm -rf dist && mkdir -p dist/src && cp index.html dist/index.html && cp src/main.js src/styles.css dist/src/",
+    "build:ui": "node scripts/build-ui.js",
     "dev": "tauri dev",
     "build": "tauri build",
     "build:windows": "tauri build --bundles nsis --target x86_64-pc-windows-msvc",
