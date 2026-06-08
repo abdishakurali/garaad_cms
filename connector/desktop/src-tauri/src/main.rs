@@ -201,7 +201,7 @@ fn main() {
         .setup(|app| {
             let (config_path, log_path) = app_data_paths(app.handle())?;
             let config = if config_path.exists() {
-                load_config_from_path(&config_path)
+                load_config_from_path(config_path.to_str().unwrap_or_default())
             } else {
                 let cfg = default_config();
                 save_config_to_path(&config_path, &cfg)?;
