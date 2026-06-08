@@ -1,0 +1,154 @@
+body {
+  margin: 0;
+  background: #f8fafc;
+  color: #0f172a;
+  font-family: Inter, Segoe UI, Arial, sans-serif;
+}
+main {
+  max-width: 840px;
+  margin: 0 auto;
+  padding: 28px;
+}
+header, section {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 16px;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+h1, h2 {
+  margin: 0 0 12px;
+}
+p {
+  color: #475569;
+}
+.hidden {
+  display: none !important;
+}
+.notice {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+.steps {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.steps button {
+  flex: 1;
+  background: white;
+  color: #1d4ed8;
+}
+.steps button.active {
+  background: #2563eb;
+  color: white;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.grid div {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+}
+span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+}
+label {
+  display: block;
+  margin: 10px 0;
+  font-weight: 600;
+}
+input, select {
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  margin-top: 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0 10px;
+}
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 500;
+}
+.check input {
+  width: auto;
+  height: auto;
+  margin: 0;
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+button {
+  height: 40px;
+  border: 1px solid #1d4ed8;
+  border-radius: 8px;
+  background: #2563eb;
+  color: white;
+  padding: 0 14px;
+  font-weight: 700;
+}
+button.secondary,
+button:nth-child(n+2) {
+  background: white;
+  color: #1d4ed8;
+}
+.results {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+}
+.result strong {
+  display: block;
+}
+.help, .message {
+  font-size: 13px;
+}
+@media (max-width: 640px) {
+  header, .notice, .result {
+    flex-direction: column;
+  }
+  .grid, .grid.two {
+    grid-template-columns: 1fr;
+  }
+  .steps {
+    flex-wrap: wrap;
+  }
+}
+.message {
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1e40af;
+  padding: 10px;
+}

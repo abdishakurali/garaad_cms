@@ -1,0 +1,18 @@
+[package]
+name = "franchisetech-connector"
+version = "0.3.0"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+franchisetech-connector = { path = "../.." }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = [] }
+tauri-plugin-autostart = "2"
+tauri-plugin-clipboard-manager = "2"
+tauri-plugin-opener = "2"
+tokio = { version = "1", features = ["rt-multi-thread"] }
+tracing-subscriber = "0.3"

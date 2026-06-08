@@ -1,0 +1,137 @@
+# Build franchisetech Connector Windows installer (0.3.0)
+# Triggers: push to main when connector source changes, or manual dispatch
+# Produces: franchisetechConnectorSetup.exe uploaded to the production server
+
+name: Build franchisetech Connector
+
+on:
+  push:
+    branches: [main, connector-build]
+    paths:
+      - 'connector/**'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g. 0.3.0)'
+        required: false
+        default: '0.3.0'
+
+jobs:
+  build-windows:
+    name: Build NSIS installer (Windows x64)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: connector/desktop
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            connector -> connector/target
+            connector/desktop/src-tauri -> connector/desktop/src-tauri/target
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: connector/desktop/package-lock.json
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install Tauri CLI
+        run: npm install --save-dev @tauri-apps/cli
+
+      - name: Build connector library (run tests)
+        working-directory: connector
+        run: cargo test --release
+
+      - name: Build Tauri NSIS installer
+        run: npx tauri build --target x86_64-pc-windows-msvc
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ''
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
+
+      - name: Locate installer
+        id: locate
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Recurse -Filter "*.exe" src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/ | Select-Object -First 1
+          echo "path=$($exe.FullName)" >> $env:GITHUB_OUTPUT
+          echo "name=$($exe.Name)" >> $env:GITHUB_OUTPUT
+
+      - name: Rename to branded installer name
+        shell: pwsh
+        run: |
+          Copy-Item "${{ steps.locate.outputs.path }}" "franchisetechConnectorSetup.exe"
+
+      - name: Calculate SHA-256
+        id: sha
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash "franchisetechConnectorSetup.exe" -Algorithm SHA256).Hash.ToLower()
+          echo "sha256=$hash" >> $env:GITHUB_OUTPUT
+          echo "SHA-256: $hash"
+
+      - name: Upload installer artifact (GitHub)
+        uses: actions/upload-artifact@v4
+        with:
+          name: franchisetechConnectorSetup-${{ github.sha }}
+          path: connector/desktop/franchisetechConnectorSetup.exe
+          retention-days: 30
+
+      - name: Deploy to production server
+        if: github.ref == 'refs/heads/main'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: 'connector/desktop/franchisetechConnectorSetup.exe'
+          target: '/var/www/fridgeproof/public/downloads/'
+          strip_components: 2
+
+      - name: Update version manifest on server
+        if: github.ref == 'refs/heads/main'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            python3 -c "
+            import json, hashlib
+            sha = hashlib.sha256(open('/var/www/fridgeproof/public/downloads/franchisetechConnectorSetup.exe','rb').read()).hexdigest()
+            m = {
+              'version': '0.3.0',
+              'name': 'franchisetech Connector',
+              'binaryVersion': '0.3.0',
+              'releaseDate': '$(date -u +%Y-%m-%d)',
+              'notes': 'Beta 0.3.0 — guided pairing, setup wizard, hardware verification prompt, printer discovery, autostart.',
+              'beta': True,
+              'signed': False,
+              'platforms': {
+                'windows': {
+                  'installerUrl': 'https://franchisetech.ro/downloads/franchisetechConnectorSetup.exe',
+                  'sha256': sha,
+                  'smartScreenWarning': True,
+                  'notes': 'SmartScreen may warn — click More info then Run anyway.'
+                },
+                'macos': {'installerUrl': None, 'notes': 'macOS build not yet available.'},
+                'linux': {'installerUrl': None, 'notes': 'Linux build not yet available.'}
+              }
+            }
+            open('/var/www/fridgeproof/public/downloads/franchisetech-connector-version.json','w').write(json.dumps(m, indent=2))
+            print('manifest updated sha=' + sha[:12])
+            "

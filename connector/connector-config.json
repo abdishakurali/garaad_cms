@@ -1,0 +1,11 @@
+{
+  "printerType": "network_escpos",
+  "printerIp": "",
+  "printerPort": 9100,
+  "drawerKickCommand": "1B700019FA",
+  "pairingToken": "",
+  "allowedOrigins": ["https://franchisetech.ro"],
+  "devMode": false,
+  "startAtLogin": true,
+  "setupComplete": false
+}

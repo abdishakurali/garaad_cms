@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>franchisetech Connector</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+    <style>
+      /* Tab nav */
+      .tabs { display:flex; gap:0; border-bottom:2px solid #e2e8f0; margin-bottom:1.25rem; }
+      .tab-btn { 
+        padding:.5rem 1.1rem; border:none; background:none; cursor:pointer; 
+        font-size:.93rem; font-weight:500; color:#64748b; border-bottom:2px solid transparent;
+        margin-bottom:-2px; transition:color .15s,border-color .15s;
+      }
+      .tab-btn.active { color:#2563eb; border-bottom-color:#2563eb; }
+      .tab-panel { display:none; }
+      .tab-panel.active { display:block; }
+      /* Mode badge */
+      .mode-badge { display:inline-flex; align-items:center; gap:.35rem; padding:.2rem .6rem; 
+        border-radius:9999px; font-size:.78rem; font-weight:600; }
+      .mode-badge.simulation { background:#eff6ff; color:#1d4ed8; }
+      .mode-badge.diagnostic { background:#fff7ed; color:#c2410c; }
+      .mode-badge.live        { background:#f0fdf4; color:#15803d; }
+      /* Events */
+      .event-list { list-style:none; padding:0; margin:0; }
+      .event-item { display:grid; grid-template-columns:1.6rem 1fr auto; gap:.4rem; 
+        align-items:start; padding:.5rem 0; border-bottom:1px solid #f1f5f9; font-size:.87rem; }
+      .event-item:last-child { border-bottom:none; }
+      .ev-icon.success { color:#16a34a; }
+      .ev-icon.info    { color:#2563eb; }
+      .ev-icon.warning { color:#d97706; }
+      .ev-icon.error   { color:#dc2626; }
+      .ev-time { font-size:.78rem; color:#94a3b8; white-space:nowrap; }
+      /* Diag checks */
+      .check-list { list-style:none; padding:0; margin:.75rem 0; }
+      .check-item { display:flex; align-items:start; gap:.5rem; padding:.3rem 0; font-size:.88rem; }
+      .check-icon.passed  { color:#16a34a; }
+      .check-icon.warning { color:#d97706; }
+      .check-icon.failed  { color:#dc2626; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <h1>franchisetech Connector</h1>
+          <p>Local connector for cash drawer commands.</p>
+        </div>
+        <div id="header-right">
+          <strong id="top-status">Running</strong>
+          <span id="mode-badge" class="mode-badge simulation">simulation</span>
+        </div>
+      </header>
+
+      <!-- Pairing request banner -->
+      <section id="pairing-request" class="notice hidden">
+        <div>
+          <h2>franchisetech wants to connect.</h2>
+          <p id="pairing-origin">Approve only if you are setting up franchisetech on this till.</p>
+        </div>
+        <div class="row">
+          <button id="approvePairing">Allow</button>
+          <button id="denyPairing" class="secondary">Deny</button>
+        </div>
+      </section>
+
+      <!-- Tab navigation -->
+      <nav class="tabs" role="tablist">
+        <button class="tab-btn active" data-tab="status"   role="tab">Status</button>
+        <button class="tab-btn"        data-tab="setup"    role="tab">Setup</button>
+        <button class="tab-btn"        data-tab="events"   role="tab">Events</button>
+        <button class="tab-btn"        data-tab="advanced" role="tab">Advanced</button>
+      </nav>
+
+      <!-- ── Tab 1: Status ──────────────────────────────────────────── -->
+      <div class="tab-panel active" data-panel="status">
+        <h2>Connector Status</h2>
+        <div class="grid">
+          <div><span>Status</span><strong id="server-status">Running · 127.0.0.1:17878</strong></div>
+          <div><span>Version</span><strong id="version">0.3.0</strong></div>
+          <div><span>Mode</span><strong id="mode-status">Simulation</strong></div>
+          <div><span>Pairing</span><strong id="pairing-status">Not configured</strong></div>
+          <div><span>Printer</span><strong id="printer-status">Not configured</strong></div>
+          <div><span>Hardware</span><strong id="hw-status">Not verified</strong></div>
+          <div><span>Last command</span><strong id="last-command">None</strong></div>
+        </div>
+
+        <h3 style="margin-top:1.25rem">Simulation test</h3>
+        <p class="help">Prove web ↔ connector communication. No printer required. No bytes sent.</p>
+        <div class="row">
+          <button id="runSimulation">Run simulation</button>
+          <button id="runDiagnostics" class="secondary">Run diagnostics</button>
+          <button id="checkStatus" class="secondary">Refresh status</button>
+        </div>
+        <div id="diag-results" class="hidden" style="margin-top:.75rem">
+          <h4>Diagnostic checks</h4>
+          <ul class="check-list" id="diag-check-list"></ul>
+        </div>
+        <p id="status-message" class="message hidden"></p>
+      </div>
+
+      <!-- ── Tab 2: Setup (wizard) ──────────────────────────────────── -->
+      <div class="tab-panel" data-panel="setup">
+        <div id="wizard">
+          <div class="steps">
+            <button data-step="0">Welcome</button>
+            <button data-step="1">Pair</button>
+            <button data-step="2">Printer</button>
+            <button data-step="3">Test</button>
+            <button data-step="4">Finish</button>
+          </div>
+
+          <div class="wizard-step" data-panel="0">
+            <h2>Welcome</h2>
+            <p>franchisetech Connector lets franchisetech communicate with your local receipt printer for cash drawer commands.</p>
+            <button data-next="1">Get started</button>
+          </div>
+
+          <div class="wizard-step hidden" data-panel="1">
+            <h2>Pair with franchisetech</h2>
+            <p>In franchisetech Settings → Cash Drawer, click <strong>Connect this device</strong>. Approve the request here when it appears.</p>
+            <p>Status: <strong id="wizard-pairing">Waiting for franchisetech</strong></p>
+            <button data-next="2" class="secondary">Continue</button>
+          </div>
+
+          <div class="wizard-step hidden" data-panel="2">
+            <h2>Printer</h2>
+            <p>Find LAN receipt printers, or enter the printer IP manually.</p>
+            <div class="row">
+              <button id="findPrintersWizard">Find network printers</button>
+            </div>
+            <div id="printer-results" class="results"></div>
+            <div class="grid two">
+              <label>Printer IP<input id="printerIp" placeholder="192.168.1.50" /></label>
+              <label>Printer port<input id="printerPort" type="number" value="9100" /></label>
+            </div>
+            <button data-next="3" class="secondary">Continue</button>
+          </div>
+
+          <div class="wizard-step hidden" data-panel="3">
+            <h2>Test setup</h2>
+            <p>Connect the cash drawer to the printer drawer port, then send a test command. Connector must be in <strong>Live mode</strong> to send real commands.</p>
+            <div class="row">
+              <button id="testConnectionWizard">Test printer connection</button>
+              <button id="testOpenWizard" class="secondary">Send test command</button>
+            </div>
+            <div id="hw-confirm" class="hidden notice">
+              <p><strong>Did the cash drawer open?</strong></p>
+              <div class="row">
+                <button id="hwYes">Yes &mdash; it opened</button>
+                <button id="hwNo" class="secondary">No &mdash; it did not open</button>
+              </div>
+            </div>
+            <div id="hw-retry" class="hidden">
+              <p class="warn">The drawer did not open. Check printer power, cable, and IP, then try again.</p>
+              <div class="row">
+                <button id="hwTryAgain">Try again</button>
+                <button id="hwSkip" class="secondary">Skip &mdash; verify later</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="wizard-step hidden" data-panel="4">
+            <h2>All done</h2>
+            <div class="grid" id="setup-summary">
+              <div><span>Connector</span><strong id="sum-connector">Running</strong></div>
+              <div><span>franchisetech paired</span><strong id="sum-paired">&mdash;</strong></div>
+              <div><span>Printer</span><strong id="sum-printer">&mdash;</strong></div>
+              <div><span>Hardware</span><strong id="sum-hardware">&mdash;</strong></div>
+            </div>
+            <button id="finishSetup">Done</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Tab 3: Events ──────────────────────────────────────────── -->
+      <div class="tab-panel" data-panel="events">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+          <h2 style="margin:0">Recent events</h2>
+          <button id="refreshEvents" class="secondary" style="font-size:.85rem;padding:.3rem .75rem">Refresh</button>
+        </div>
+        <p class="help">Last 50 connector events. Cleared on restart.</p>
+        <ul class="event-list" id="event-list">
+          <li style="color:#94a3b8;font-size:.88rem;padding:.75rem 0">No events yet.</li>
+        </ul>
+      </div>
+
+      <!-- ── Tab 4: Advanced ────────────────────────────────────────── -->
+      <div class="tab-panel" data-panel="advanced">
+        <h2>Connector Mode</h2>
+        <p class="help">
+          <strong>Simulation</strong>: No printer needed. Proves web ↔ connector comms only.<br/>
+          <strong>Diagnostic</strong>: Runs checks but never sends bytes to printer.<br/>
+          <strong>Live</strong>: Sends real ESC/POS drawer-kick. Enable only when hardware is verified.
+        </p>
+        <label>Run mode
+          <select id="connectorRunMode">
+            <option value="simulation">Simulation (default — safe)</option>
+            <option value="diagnostic">Diagnostic</option>
+            <option value="live">Live</option>
+          </select>
+        </label>
+
+        <h2 style="margin-top:1.25rem">Printer</h2>
+        <label>Printer type
+          <select id="printerType">
+            <option value="network_escpos">Network ESC/POS</option>
+          </select>
+        </label>
+        <div class="row">
+          <button id="findPrinters">Find network printers</button>
+        </div>
+        <div id="printer-results-main" class="results"></div>
+        <div class="grid two">
+          <label>Printer IP<input id="printerIpMain" placeholder="192.168.1.50" /></label>
+          <label>Printer port<input id="printerPortMain" type="number" value="9100" /></label>
+        </div>
+        <p class="help">Supports LAN ESC/POS printers. The cash drawer must be plugged into the drawer port on the printer.</p>
+
+        <h2 style="margin-top:1.25rem">Security / Pairing</h2>
+        <label>Pairing token<input id="pairingToken" /></label>
+        <div class="row">
+          <button id="generateToken">Generate token</button>
+          <button id="copyToken" class="secondary">Copy token</button>
+        </div>
+        <label>Allowed origin<input id="allowedOrigin" value="https://franchisetech.ro" /></label>
+        <label class="check"><input id="startAtLogin" type="checkbox" /> Start franchisetech Connector when this computer starts</label>
+        <label class="check"><input id="devMode" type="checkbox" /> Development only — do not enable in customer sites unless support asks</label>
+
+        <h2 style="margin-top:1.25rem">Actions</h2>
+        <div class="row">
+          <button id="save">Save settings</button>
+          <button id="testConnection" class="secondary">Test printer connection</button>
+          <button id="testOpen" class="secondary">Send test open command</button>
+          <button id="exportDiagnostics" class="secondary">Export diagnostics</button>
+          <button id="openLogs" class="secondary">Open logs</button>
+        </div>
+        <p id="message" class="message">Connector is running.</p>
+      </div>
+
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
